@@ -20,11 +20,11 @@ STM32F072C8_CMSIS_DEVICE := STM32F0xx
 STM32F072C8_H := stm32f0xx.h
 STM32F072C8_CPU_FLAGS := -mcpu=cortex-m0 -mthumb -DSTM32F072xB
 
-STM32F103C8_FAMILY := f1
-STM32F103C8_LD := stm32f103c8$(BL).ld
-STM32F103C8_CMSIS_DEVICE := STM32F1xx
-STM32F103C8_H := stm32f103x6.h
-STM32F103C8_CPU_FLAGS := -mcpu=cortex-m3 -mthumb -DSTM32F103xB
+STM32F103X6_FAMILY := f1
+STM32F103X6_LD := stm32f103x6$(BL).ld
+STM32F103X6_CMSIS_DEVICE := STM32F1xx
+STM32F103X6_H := stm32f103x6.h
+STM32F103X6_CPU_FLAGS := -mcpu=cortex-m3 -mthumb -DSTM32F103x6
 
 STM32F103C8_FAMILY := f1
 STM32F103C8_LD := stm32f103c8$(BL).ld
@@ -75,7 +75,7 @@ endif
 
 OPTIMIZE ?= -Os
 
-CORE_CFLAGS += -I. -I$(STM32TL) -I$(STM32TL)/common -I$(STM32TL)/$(FAMILY) -I$(STM32CMSIS)/Include -I$(STM32CMSIS)/Device/ST/$(CMSIS_DEVICE)/Include -fno-common $(OPTIMIZE) -g -Wall $(CPU_FLAGS) -ffunction-sections -fdata-sections -D$(CPU) -D$(CMSIS_DEVICE) $(BOARD_INCLUDE) $(PROJECT_FLAGS)
+CORE_CFLAGS += -I. -I$(STM32TL) -I$(STM32TL)/common -I$(STM32TL)/$(FAMILY) -I$(STM32CMSIS)/CMSIS/Include -I$(STM32CMSIS)/Device/ST/$(CMSIS_DEVICE)/Include -fno-common $(OPTIMIZE) -g -Wall $(CPU_FLAGS) -ffunction-sections -fdata-sections -D$(CPU) -D$(CMSIS_DEVICE) $(BOARD_INCLUDE) $(PROJECT_FLAGS)
 CFLAGS = $(CORE_CFLAGS) -std=c11 -MMD -c
 CXXFLAGS = $(CORE_CFLAGS) -std=c++11 -MMD -c -fno-unwind-tables -fno-exceptions
 LDFLAGS = -fdata-sections -ffunction-sections -L$(STM32TL)/$(FAMILY) --specs=nano.specs -Wl,--gc-sections -Wl,-T$(STM32TL)/$(FAMILY)/$(LINKER_SCRIPT) $(CORE_CFLAGS) -lstdc++ -lsupc++ -lm -lc -lgcc -lnosys
