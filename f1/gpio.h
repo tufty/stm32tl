@@ -3,6 +3,12 @@
 #include <stm32f1xx.h>
 #include <tasks.h>
 
+// Undefine the CMSIS stuff
+#undef GPIOA
+#undef GPIOB
+#undef GPIOC
+#undef GPIOD
+
 extern volatile uint32_t EXTI_IRQ_STATE;
 
 enum GPIO_PORT_ID {
@@ -57,7 +63,7 @@ template<const GPIO_PORT_ID PORT,
 	const INTERRUPT_ENABLE INTERRUPT = INTERRUPT_DISABLED,
 	const EDGE EXTI_EDGE = EDGE_RISING>
 struct GPIO_T {
-	static constexpr GPIO_TypeDef *port = ((GPIO_TypeDef *) (GPIOA_BASE + PORT * 0x400));
+	static constexpr uintptr_t port = (GPIOA_BASE + PORT * 0x400);
       	static constexpr uint8_t pin = PIN;
 	static constexpr GPIO_MODE mode = MODE;
 	static constexpr GPIO_CONF conf = CONF;
@@ -76,22 +82,22 @@ struct GPIO_T {
 	static void init(void) {
 		if (MODE != INPUT && CONF != FLOATING) {
 			if (PIN < 8) {
-				port->CRL = (port->CRL & mode_conf_low_mask) | mode_conf_low;
+				reinterpret_cast<GPIO_TypeDef *>(port)->CRL = (reinterpret_cast<GPIO_TypeDef *>(port)->CRL & mode_conf_low_mask) | mode_conf_low;
 			} else {
-				port->CRH = (port->CRL & mode_conf_high_mask) | mode_conf_high;
+				reinterpret_cast<GPIO_TypeDef *>(port)->CRH = (reinterpret_cast<GPIO_TypeDef *>(port)->CRL & mode_conf_high_mask) | mode_conf_high;
 			}
 		}
 		if (INITIAL_LEVEL == HIGH) {
-			port->BSRR = bit_value;
+			reinterpret_cast<GPIO_TypeDef *>(port)->BSRR = bit_value;
 		}
 	}
 
 	static void set_high(void) {
-		port->BSRR = bit_value;
+		reinterpret_cast<GPIO_TypeDef *>(port)->BSRR = bit_value;
 	};
 
 	static void set_low(void) {
-		port->BRR = bit_value;
+		reinterpret_cast<GPIO_TypeDef *>(port)->BRR = bit_value;
 	}
 
 	static void set_value(bool value) {
@@ -100,11 +106,11 @@ struct GPIO_T {
 	}
 
 	static bool get_value(void) {
-		return port->IDR & bit_value;
+		return reinterpret_cast<GPIO_TypeDef *>(port)->IDR & bit_value;
 	}
 
 	static bool is_high(void) {
-		return port->IDR & bit_value;
+		return reinterpret_cast<GPIO_TypeDef *>(port)->IDR & bit_value;
 	}
 
 	static bool is_low(void) {
@@ -145,11 +151,11 @@ struct GPIO_T {
 	}
 
 	static void pull_up(void) {
-		port->ODR |= bit_value;
+		reinterpret_cast<GPIO_TypeDef *>(port)->ODR |= bit_value;
 	}
 
 	static void pull_down(void) {
-		port->ODR &= ~bit_value;
+		reinterpret_cast<GPIO_TypeDef *>(port)->ODR &= ~bit_value;
 	}
 
 	static constexpr int exti_source(void) {
@@ -223,7 +229,7 @@ template <const GPIO_PORT_ID PORT,
 	typename PIN14 = PIN_UNUSED,
 	typename PIN15 = PIN_UNUSED>
 struct GPIO_PORT_T {
-	static constexpr GPIO_TypeDef *port = ((GPIO_TypeDef *) (GPIOA_BASE + PORT * 0x400));
+	static constexpr uintptr_t port = (GPIOA_BASE + PORT * 0x400);
 	static constexpr uint32_t crl = (0x44444444 &
 		PIN0::mode_conf_low_mask & PIN1::mode_conf_low_mask & PIN2::mode_conf_low_mask & PIN3::mode_conf_low_mask &
 		PIN4::mode_conf_low_mask & PIN5::mode_conf_low_mask & PIN6::mode_conf_low_mask & PIN7::mode_conf_low_mask &
@@ -250,15 +256,15 @@ struct GPIO_PORT_T {
 
 	static void init(void) {
 		RCC->APB2ENR |= (1 << (PORT + 2));
-		if (crl != 0x44444444) port->CRL = crl;
-		if (crh != 0x44444444) port->CRH = crh;
-		port->ODR = odr;
+		if (crl != 0x44444444) reinterpret_cast<GPIO_TypeDef *>(port)->CRL = crl;
+		if (crh != 0x44444444) reinterpret_cast<GPIO_TypeDef *>(port)->CRH = crh;
+		reinterpret_cast<GPIO_TypeDef *>(port)->ODR = odr;
 	}
 
 	static void disable(void) {
 		RCC->APB2ENR |= (1 << (PORT + 2));
-		port->CRL = 0x44444444;
-		port->CRH = 0x44444444;
+		reinterpret_cast<GPIO_TypeDef *>(port)->CRL = 0x44444444;
+		reinterpret_cast<GPIO_TypeDef *>(port)->CRH = 0x44444444;
 		RCC->APB2ENR &= ~(1 << (PORT + 2));
 	}
 };
