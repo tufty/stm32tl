@@ -1,85 +1,104 @@
 #pragma once
 
+// remove typed defines
+#undef TIM1
+#undef TIM2
+#undef TIM3
+#undef TIM4
+#undef TIM5
+#undef TIM6
+#undef TIM7
+#undef TIM8
+#undef TIM9
+#undef TIM10
+#undef TIM11
+#undef TIM12
+#undef TIM13
+#undef TIM14
+#undef TIM15
+#undef TIM16
+#undef TIM17
+
 static constexpr TIM_TypeDef *timer_addr[18] = {
 	0,
-	TIM1,
-#ifdef TIM2
-	TIM2,
+	((TIM_TypeDef *)TIM1_BASE),
+#ifdef TIM2_BASE
+	((TIM_TypeDef *)TIM2_BASE),
 #else
 	0,
 #endif
-#ifdef TIM3
-	TIM3,
+#ifdef TIM3_BASE
+	((TIM_TypeDef *)TIM3_BASE),
 #else
 	0,
 #endif
-#ifdef TIM4
-	TIM4,
+#ifdef TIM4_BASE
+	((TIM_TypeDef *)TIM4_BASE),
 #else
 	0,
 #endif
-#ifdef TIM5
-	TIM5,
+#ifdef TIM5_BASE
+	((TIM_TypeDef *)TIM5_BASE),
 #else
 	0,
 #endif
-#ifdef TIM6
-	TIM6,
+#ifdef TIM6_BASE
+	((TIM_TypeDef *)TIM6_BASE),
 #else
 	0,
 #endif
-#ifdef TIM7
-	TIM7,
+#ifdef TIM7_BASE
+	((TIM_TypeDef *)TIM7_BASE),
 #else
 	0,
 #endif
-#ifdef TIM8
-	TIM8,
+#ifdef TIM8_BASE
+	((TIM_TypeDef *)TIM8_BASE),
 #else
 	0,
 #endif
-#ifdef TIM9
-	TIM9,
+#ifdef TIM9_BASE
+	((TIM_TypeDef *)TIM9_BASE),
 #else
 	0,
 #endif
-#ifdef TIM10
-	TIM10,
+#ifdef TIM10_BASE
+	((TIM_TypeDef *)TIM10_BASE),
 #else
 	0,
 #endif
-#ifdef TIM11
-	TIM11,
+#ifdef TIM11_BASE
+	((TIM_TypeDef *)TIM11_BASE),
 #else
 	0,
 #endif
-#ifdef TIM12
-	TIM12,
+#ifdef TIM12_BASE
+	((TIM_TypeDef *)TIM12_BASE),
 #else
 	0,
 #endif
-#ifdef TIM13
-	TIM13,
+#ifdef TIM13_BASE
+	((TIM_TypeDef *)TIM13_BASE),
 #else
 	0,
 #endif
-#ifdef TIM14
-	TIM14,
+#ifdef TIM14_BASE
+	((TIM_TypeDef *)TIM14_BASE),
 #else
 	0,
 #endif
-#ifdef TIM15
-	TIM15,
+#ifdef TIM15_BASE
+	((TIM_TypeDef *)TIM15_BASE),
 #else
 	0,
 #endif
-#ifdef TIM16
-	TIM16,
+#ifdef TIM16_BASE
+	((TIM_TypeDef *)TIM16_BASE),
 #else
 	0,
 #endif
-#ifdef TIM17
-	TIM17,
+#ifdef TIM17_BASE
+	((TIM_TypeDef *)TIM17_BASE),
 #else
 	0,
 #endif
@@ -127,14 +146,36 @@ struct INPUT_TIMER_CHANNEL_T {
 	static void enable_irq(void) {
 		timer->DIER |= (2 << number);
 		switch (TIMER_NUMBER) {
-			case 1: NVIC_ClearPendingIRQ(TIM1_BRK_UP_TRG_COM_IRQn); NVIC_EnableIRQ(TIM1_BRK_UP_TRG_COM_IRQn);
-				NVIC_ClearPendingIRQ(TIM1_CC_IRQn); NVIC_EnableIRQ(TIM1_CC_IRQn); break;
-			case 3: NVIC_ClearPendingIRQ(TIM3_IRQn); NVIC_EnableIRQ(TIM3_IRQn); break;
-			case 6: NVIC_ClearPendingIRQ(TIM6_DAC_IRQn); NVIC_EnableIRQ(TIM6_DAC_IRQn); break;
-			case 14: NVIC_ClearPendingIRQ(TIM14_IRQn); NVIC_EnableIRQ(TIM14_IRQn); break;
-			case 15: NVIC_ClearPendingIRQ(TIM15_IRQn); NVIC_EnableIRQ(TIM15_IRQn); break;
-			case 16: NVIC_ClearPendingIRQ(TIM16_IRQn); NVIC_EnableIRQ(TIM16_IRQn); break;
-			case 17: NVIC_ClearPendingIRQ(TIM17_IRQn); NVIC_EnableIRQ(TIM17_IRQn); break;
+#ifdef TIM1_BASE
+			case 1:
+			  NVIC_ClearPendingIRQ(TIM1_BRK_IRQn);
+			  NVIC_EnableIRQ(TIM1_BRK_IRQn);
+			  NVIC_ClearPendingIRQ(TIM1_UP_IRQn);
+			  NVIC_EnableIRQ(TIM1_UP_IRQn);
+			  NVIC_ClearPendingIRQ(TIM1_TRG_COM_IRQn);
+			  NVIC_EnableIRQ(TIM1_TRG_COM_IRQn);
+			  NVIC_ClearPendingIRQ(TIM1_CC_IRQn);
+			  NVIC_EnableIRQ(TIM1_CC_IRQn);
+			  break;
+#endif
+#ifdef TIM2_BASE
+			case 2:
+			  NVIC_ClearPendingIRQ(TIM2_IRQn);
+			  NVIC_EnableIRQ(TIM2_IRQn);
+			  break;
+#endif
+#ifdef TIM3_BASE		  
+			case 3:
+			  NVIC_ClearPendingIRQ(TIM3_IRQn);
+			  NVIC_EnableIRQ(TIM3_IRQn);
+			  break;
+#endif
+#ifdef TIM4_BASE
+			case 4:
+			  NVIC_ClearPendingIRQ(TIM4_IRQn);
+			  NVIC_EnableIRQ(TIM4_IRQn);
+			  break;
+#endif		  
 		}
 	}
 
@@ -158,24 +199,18 @@ struct TIMER_T {
 	static void init(void) {
 		switch (TIMER_NUMBER) {
 			case 1: RCC->APB2ENR |= RCC_APB2ENR_TIM1EN; break;
+			case 2: RCC->APB1ENR |= RCC_APB1ENR_TIM2EN; break;
 			case 3: RCC->APB1ENR |= RCC_APB1ENR_TIM3EN; break;
-			case 6: RCC->APB1ENR |= RCC_APB1ENR_TIM6EN; break;
-			case 14: RCC->APB1ENR |= RCC_APB1ENR_TIM14EN; break;
-			case 15: RCC->APB2ENR |= RCC_APB2ENR_TIM15EN; break;
-			case 16: RCC->APB2ENR |= RCC_APB2ENR_TIM16EN; break;
-			case 17: RCC->APB2ENR |= RCC_APB2ENR_TIM17EN; break;
+			case 4: RCC->APB1ENR |= RCC_APB1ENR_TIM4EN; break;
 		}
 	}
 
 	static void disable(void) {
 		switch (TIMER_NUMBER) {
 			case 1: RCC->APB2ENR &= ~RCC_APB2ENR_TIM1EN; break;
+			case 2: RCC->APB1ENR &= ~RCC_APB1ENR_TIM2EN; break;
 			case 3: RCC->APB1ENR &= ~RCC_APB1ENR_TIM3EN; break;
-			case 6: RCC->APB1ENR &= ~RCC_APB1ENR_TIM6EN; break;
-			case 14: RCC->APB1ENR &= ~RCC_APB1ENR_TIM14EN; break;
-			case 15: RCC->APB2ENR &= ~RCC_APB2ENR_TIM15EN; break;
-			case 16: RCC->APB2ENR &= ~RCC_APB2ENR_TIM16EN; break;
-			case 17: RCC->APB2ENR &= ~RCC_APB2ENR_TIM17EN; break;
+			case 4: RCC->APB1ENR &= ~RCC_APB1ENR_TIM4EN; break;
 		}
 	}
 
