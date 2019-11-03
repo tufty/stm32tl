@@ -30,7 +30,6 @@ typedef GPIO_PORT_T<PB, LED1> PORT_B;
 
 
 typedef GP_TIMER_T<3> TIM3;
-typedef ADV_TIMER_T<1> TIM1;
 
 
 int main(void)
@@ -53,8 +52,14 @@ int main(void)
   TIM3::set_divider(TIM3::DIVIDE_1);
   TIM3::set_prescaler(40000);
   TIM3::set_reload(1000);
-  TIM1::set_repetition_counter(1234);
 
+  TIM3::CH3::set_oc_mode(TIM3::CH3::PWM_1);
+  TIM3::CH3::set_ccr(400);
+  TIM3::CH3::output_enable();
+  TIM3::CH3::set_output_polarity(TIM3::CH3::OP_HIGH);
+
+  TIM3::run();
+  
   
   TIM3::one_pulse_mode_disable();
 

@@ -64,9 +64,76 @@ template <const uint8_t TIMER_NUMBER, TIMER_REG reg> static volatile uint32_t * 
     return (volatile uint32_t *)timer_configs[TIMER_NUMBER].base + (reg << 2); 
   }
 
-
 template <const uint8_t TIMER_NUMBER, const uint8_t CHANNEL_NUMBER>
 struct TIMER_CHANNEL_T {
+  static constexpr TIMER_REG CCMR = CHANNEL_NUMBER < 3 ? CCMR1 : CCMR2;
+  static constexpr TIMER_REG CCR = CHANNEL_NUMBER == 1 ? CCR1 : CHANNEL_NUMBER == 2 ? CCR2 : CHANNEL_NUMBER == 3 ? CCR3 : CCR4;
+  
+  static constexpr uintptr_t oe_bit = timer_configs[TIMER_NUMBER].bb_base + BB_OFFSETOF(TIM_TypeDef, CCER) + (((CHANNEL_NUMBER - 1) * 4) << 2);
+  static void output_enable() {
+    *(uint32_t*)oe_bit = 1;
+  }
+  static void output_disable() {
+    *(uint32_t*)oe_bit = 0;
+  }
+
+  static constexpr uintptr_t op_bit = timer_configs[TIMER_NUMBER].bb_base + BB_OFFSETOF(TIM_TypeDef, CCER) + ((((CHANNEL_NUMBER - 1) * 4) + 1) << 2);
+  typedef enum { OP_HIGH = 0, OP_LOW } OUTPUT_POLARITY;
+  static void set_output_polarity(const OUTPUT_POLARITY p) {
+    *(uint32_t*)op_bit = p;
+  }
+  
+  static constexpr uintptr_t one_bit = timer_configs[TIMER_NUMBER].bb_base + BB_OFFSETOF(TIM_TypeDef, CCER) + ((((CHANNEL_NUMBER - 1) * 4) + 2) << 2);
+  static void output_n_enable() {
+    static_assert(TIMER_NUMBER == 1 || TIMER_NUMBER == 8, "Complementary outputs only available on advanced timers");
+    *(uint32_t*)one_bit = 1;
+  }
+  static void output_n_disable() {
+    static_assert(TIMER_NUMBER == 1 || TIMER_NUMBER == 8, "Complementary outputs only available on advanced timers");
+    *(uint32_t*)one_bit = 0;
+  }
+
+  static constexpr uintptr_t onp_bit = timer_configs[TIMER_NUMBER].bb_base + BB_OFFSETOF(TIM_TypeDef, CCER) + ((((CHANNEL_NUMBER - 1) * 4) + 3) << 2);
+  static void set_output_n_polarity(const OUTPUT_POLARITY p) {
+    static_assert(TIMER_NUMBER == 1 || TIMER_NUMBER == 8, "Complementary outputs only available on advanced timers");
+    *(uint32_t*)onp_bit = p;
+  }
+
+  static constexpr uintptr_t ois_bit = timer_configs[TIMER_NUMBER].bb_base + BB_OFFSETOF(TIM_TypeDef, CR2) + ((((CHANNEL_NUMBER - 1) * 2) << 8) << 2);
+  static void set_output_idle_state(const OUTPUT_POLARITY p) {
+    static_assert(TIMER_NUMBER == 1 || TIMER_NUMBER == 8, "Output idle states only available on advanced timers");
+    *(uint32_t*)ois_bit = p;
+  }
+
+  static constexpr uintptr_t onis_bit = timer_configs[TIMER_NUMBER].bb_base + BB_OFFSETOF(TIM_TypeDef, CR2) + (((((CHANNEL_NUMBER - 1) * 2) << 8) + 1) << 2);
+  static void set_output_n_idle_state(const OUTPUT_POLARITY p) {
+    static_assert(TIMER_NUMBER == 1 || TIMER_NUMBER == 8, "Output idle states only available on advanced timers");
+    *(uint32_t*)onis_bit = p;
+  }
+
+  
+  
+  
+  typedef enum { FROZEN = 0, ACTIVE_MATCH, INACTIVE_MATCH, FORCE_LOW, FORCE_HIGH, PWM_1, PWM_2 } OC_MODE;
+  static void set_oc_mode (const OC_MODE mode) {
+    constexpr uint8_t shift = 4 + (8 * ((CHANNEL_NUMBER - 1) & 1));
+    
+    uint16_t val = *timer_reg<TIMER_NUMBER, CCMR>();
+    val &= 0x07 << shift;
+    val |= mode << shift;
+    *timer_reg<TIMER_NUMBER, CCMR>() = val;
+  }
+
+  // Capture-compare register access
+  static void set_ccr(const uint16_t val) {
+    *timer_reg<TIMER_NUMBER, CCR>() = val;
+  }
+  static uint16_t ccr() {
+    return *timer_reg<TIMER_NUMBER, CCR>();
+  }
+
+
+  
   // DMA and interrupt enable
   static constexpr uintptr_t dma_enable_bit = timer_configs[TIMER_NUMBER].bb_base + BB_OFFSETOF(TIM_TypeDef, DIER) + ((8 + CHANNEL_NUMBER) << 2);
   static constexpr uintptr_t irq_enable_bit = timer_configs[TIMER_NUMBER].bb_base + BB_OFFSETOF(TIM_TypeDef, DIER) + (CHANNEL_NUMBER << 2);
@@ -271,7 +338,7 @@ struct ADV_TIMER_T : public TIMER_T<TIMER_NUMBER>
     TIMER_T<TIMER_NUMBER>::init();
   }
 
-  static void set_repetition_counter(const uint16_t value) {
+  static void set_repetition_counter(const uint8_t value) {
     *timer_reg<TIMER_NUMBER, RCR>() = value;
   }
 };
