@@ -58,21 +58,22 @@ static constexpr struct {
   };
 
 
-#define TIMER_REG(x) \
-  static constexpr uintptr_t _ ## x = timer_configs[TIMER_NUMBER].base + offsetof(TIM_TypeDef, x);
+// #define TIMER_REG(x) \
+//   static constexpr uintptr_t _ ## x = timer_configs[TIMER_NUMBER].base + offsetof(TIM_TypeDef, x);
 
-#define TIMER_ACCESSOR(x)						\
-  TIMER_REG(x)								\
-  static volatile uint32_t x () {					\
-    return *(uint32_t *)_ ## x ;					\
-  }									\
-  static void x (uint32_t value) {					\
-    *(uint32_t *)_ ## x = value;					\
-  }
+// #define TIMER_ACCESSOR(x)						\
+//   TIMER_REG(x)								\
+//   static volatile uint32_t x () {					\
+//     return *(uint32_t *)_ ## x ;					\
+//   }									\
+//   static void x (uint32_t value) {					\
+//     *(uint32_t *)_ ## x = value;					\
+//   }
 
 
 template <const uint8_t TIMER_NUMBER, const uint8_t CHANNEL_NUMBER>
 struct TIMER_CHANNEL_T {
+  // DMA and interrupt enable
   static constexpr uintptr_t dma_enable_bit = timer_configs[TIMER_NUMBER].bb_base + BB_OFFSETOF(TIM_TypeDef, DIER) + ((8 + CHANNEL_NUMBER) << 2);
   static constexpr uintptr_t irq_enable_bit = timer_configs[TIMER_NUMBER].bb_base + BB_OFFSETOF(TIM_TypeDef, DIER) + (CHANNEL_NUMBER << 2);
   
@@ -90,40 +91,18 @@ struct TIMER_CHANNEL_T {
   }
 };
 
+// Base timer functionality
 template <const uint8_t TIMER_NUMBER>
 struct TIMER_T {
   static_assert(TIMER_NUMBER > 0 && TIMER_NUMBER < 18, "Timers must be in range 1->17");
   static_assert(timer_configs[TIMER_NUMBER].base != 0xdeadbeef, "Timer not defined for this platform");
-};
 
-template <const uint8_t TIMER_NUMBER>
-struct GP_TIMER_T  : public TIMER_T<TIMER_NUMBER>
-{
-  static_assert(TIMER_NUMBER > 1 && TIMER_NUMBER < 6, "General Purpose Timers must be in range 2->5");
-  // Generate accessors for all the normal registers
-  TIMER_REG(CR1);
-  TIMER_REG(CR2);
-  TIMER_REG(SMCR);
-  TIMER_REG(DIER);
-  TIMER_REG(SR);
-  TIMER_REG(EGR);
-  TIMER_REG(CCMR1);
-  TIMER_REG(CCMR2);
-  TIMER_REG(CCER);
-  TIMER_REG(CNT);
-  TIMER_REG(PSC);
-  TIMER_REG(ARR);
-  TIMER_REG(RCR);
-  TIMER_REG(CCR1);
-  TIMER_REG(CCR2);
-  TIMER_REG(CCR3);
-  TIMER_REG(CCR4);
-  TIMER_REG(BDTR);
-  TIMER_REG(DCR);
-  TIMER_REG(DMAR);
-  TIMER_REG(OR);
-
-  // Now some specialised stuff using bit banding to access individual bits
+  // Accessor function template for timer registers
+  typedef enum { CR1 = 0, CR2, SMCR, DIER, SR, EGR, CCMR1, CCMR2, CCER, CNT, PSC, ARR, RCR, CCR1, CCR2, CCR3, CCR4, BDTR, DCR, DMAR, OR } TIMER_REG;
+  template <TIMER_REG reg> static volatile uint32_t * timer_reg(void) {
+    // use of volatile as we may also access registers via bit-banding
+    return (volatile uint32_t *)timer_configs[TIMER_NUMBER].base + (reg << 2); 
+  }
   
   // Overall timer enabling in RCC
   static constexpr uintptr_t rcc_enable_bit = RCC_BB_BASE + timer_configs[TIMER_NUMBER].rcc_enable_offset;
@@ -139,6 +118,70 @@ struct GP_TIMER_T  : public TIMER_T<TIMER_NUMBER>
   static void stop() {
     *(uint32_t*)enable_bit = 0;
   }
+
+  // Time base setup
+  typedef enum { NO_DIVISION = 0, DIVIDE_2 = 1, DIVIDE_4 = 2 } CLOCK_DIVIDER;
+  static void set_divider(const CLOCK_DIVIDER division) {
+    uint32_t val = *timer_reg<CR1>();
+    val &= ~TIM_CR1_CKD_Msk;
+    val |= division << TIM_CR1_CKD_Pos;
+    *timer_reg<CR1>() = val;
+  }
+
+  typedef enum { UP_COUNTER = 0, DOWN_COUNTER = 1 } DIRECTION;
+  static constexpr uintptr_t direction_bit = timer_configs[TIMER_NUMBER].bb_base + BB_OFFSETOF(TIM_TypeDef, CR1) + BB_BIT(TIM_CR1_DIR_Pos);
+  static void set_direction(const DIRECTION direction) {
+    *(uint32_t*)direction_bit = direction;
+  }
+
+  typedef enum { EDGE_ALIGNED = 0, CENTRE_ALIGNED_1 = 1, CENTRE_ALIGNED_2 = 2, CENTRE_ALIGNED_3 = 3 } ALIGNMENT_MODE;
+  static void set_alignment_mode(const ALIGNMENT_MODE alignent_mode) {
+    uint32_t val = *timer_reg<CR1>();
+    val &=  ~TIM_CR1_CMS_Msk;
+    val |= alignent_mode << TIM_CR1_CMS_Pos;
+    *timer_reg<CR1>() = val;
+  }
+  
+  
+};
+
+template <const uint8_t TIMER_NUMBER>
+struct GP_TIMER_T  : public TIMER_T<TIMER_NUMBER>
+{
+  static_assert(TIMER_NUMBER > 1 && TIMER_NUMBER < 6, "General Purpose Timers must be in range 2->5");
+  // Add channels
+  typedef TIMER_CHANNEL_T<TIMER_NUMBER, 1> CH1;
+  typedef TIMER_CHANNEL_T<TIMER_NUMBER, 2> CH2;
+  typedef TIMER_CHANNEL_T<TIMER_NUMBER, 3> CH3;
+  typedef TIMER_CHANNEL_T<TIMER_NUMBER, 4> CH4;
+
+
+  
+  // Generate accessors for all the normal registers
+  // TIMER_REG(CR1);
+  // TIMER_REG(CR2);
+  // TIMER_REG(SMCR);
+  // TIMER_REG(DIER);
+  // TIMER_REG(SR);
+  // TIMER_REG(EGR);
+  // TIMER_REG(CCMR1);
+  // TIMER_REG(CCMR2);
+  // TIMER_REG(CCER);
+  // TIMER_REG(CNT);
+  // TIMER_REG(PSC);
+  // TIMER_REG(ARR);
+  // TIMER_REG(RCR);
+  // TIMER_REG(CCR1);
+  // TIMER_REG(CCR2);
+  // TIMER_REG(CCR3);
+  // TIMER_REG(CCR4);
+  // TIMER_REG(BDTR);
+  // TIMER_REG(DCR);
+  // TIMER_REG(DMAR);
+  // TIMER_REG(OR);
+
+  // Now some specialised stuff using bit banding to access individual bits
+  
 
   // Overall DMA and interrupt, see individual channels for channel level stuff
   static constexpr uintptr_t udma_enable_bit = timer_configs[TIMER_NUMBER].bb_base + BB_OFFSETOF(TIM_TypeDef, DIER) + BB_BIT(TIM_DIER_UDE_Pos);

@@ -47,6 +47,11 @@ int main(void)
 
   TIM3::enable();
   TIM3::remap(0);
+  TIM3::set_divider(TIM3::DIVIDE_2);
+  TIM3::set_direction(TIM3::DOWN_COUNTER);
+  TIM3::set_alignment_mode(TIM3::CENTRE_ALIGNED_2);
+
+  TIM3::CH1::irq_enable();
   
   while (1) {
     TIMEOUT::set_and_wait(900);
