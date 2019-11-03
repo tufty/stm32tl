@@ -111,8 +111,41 @@ struct TIMER_CHANNEL_T {
     *(uint32_t*)onis_bit = p;
   }
 
+  // Brainfarting here, should use the bitbanded stuff
+  static void output_preload_enable() {
+    constexpr uint8_t shift = 3 + (8 * ((CHANNEL_NUMBER - 1) & 1));
+    *timer_reg<TIMER_NUMBER, CCMR>() |= 1 << shift;
+  }
+  static void output_preload_disable() {
+    constexpr uint8_t shift = 3 + (8 * ((CHANNEL_NUMBER - 1) & 1));
+    *timer_reg<TIMER_NUMBER, CCMR>() &= ~(1 << shift);
+  }
+  static void output_fast_enable() {
+    constexpr uint8_t shift = 2 + (8 * ((CHANNEL_NUMBER - 1) & 1));
+    *timer_reg<TIMER_NUMBER, CCMR>() |= 1 << shift;
+  }
+  static void output_fast_disable() {
+    constexpr uint8_t shift = 2 + (8 * ((CHANNEL_NUMBER - 1) & 1));
+    *timer_reg<TIMER_NUMBER, CCMR>() &= ~(1 << shift);
+  }
+  static void output_clear_enable() {
+    constexpr uint8_t shift = 7 + (8 * ((CHANNEL_NUMBER - 1) & 1));
+    *timer_reg<TIMER_NUMBER, CCMR>() |= 1 << shift;
+  }
+  static void output_clear_disable() {
+    constexpr uint8_t shift = 7 + (8 * ((CHANNEL_NUMBER - 1) & 1));
+    *timer_reg<TIMER_NUMBER, CCMR>() &= ~(1 << shift);
+  }
   
-  
+  typedef enum { OUTPUT = 0, INPUT_TI2, INPUT_TI1, INPUT_TRC } CAPTURE_COMPARE_STATE;
+  static void set_capture_compare_state(const CAPTURE_COMPARE_STATE state) {
+    constexpr uint8_t shift = (8 * ((CHANNEL_NUMBER - 1) & 1));
+    uint16_t val = *timer_reg<TIMER_NUMBER, CCMR>();
+    val &= 0x03 << shift;
+    val |= state << shift;
+    *timer_reg<TIMER_NUMBER, CCMR>() = val;
+  }
+
   
   typedef enum { FROZEN = 0, ACTIVE_MATCH, INACTIVE_MATCH, FORCE_LOW, FORCE_HIGH, PWM_1, PWM_2 } OC_MODE;
   static void set_oc_mode (const OC_MODE mode) {

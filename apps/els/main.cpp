@@ -53,16 +53,18 @@ int main(void)
   TIM3::set_prescaler(40000);
   TIM3::set_reload(1000);
 
-  TIM3::CH3::set_oc_mode(TIM3::CH3::PWM_1);
-  TIM3::CH3::set_ccr(400);
-  TIM3::CH3::output_enable();
-  TIM3::CH3::set_output_polarity(TIM3::CH3::OP_HIGH);
+  TIM3::CH4::set_capture_compare_state(TIM3::CH4::OUTPUT);
+  TIM3::CH4::output_enable();
+  TIM3::CH4::set_oc_mode(TIM3::CH4::PWM_1);
+  TIM3::CH4::set_ccr(400);
+  TIM3::CH4::set_output_polarity(TIM3::CH4::OP_HIGH);
+  TIM3::CH4::output_preload_enable();
 
+  
+  
   TIM3::run();
   
   
-  TIM3::one_pulse_mode_disable();
-
   TIM3::CH1::irq_enable();
   
   while (1) {
