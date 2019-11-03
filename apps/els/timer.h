@@ -57,18 +57,12 @@ static constexpr struct {
    { 0xdeadbeef, 0xdeadbeef, 0xdeadbeef},
   };
 
-
-// #define TIMER_REG(x) \
-//   static constexpr uintptr_t _ ## x = timer_configs[TIMER_NUMBER].base + offsetof(TIM_TypeDef, x);
-
-// #define TIMER_ACCESSOR(x)						\
-//   TIMER_REG(x)								\
-//   static volatile uint32_t x () {					\
-//     return *(uint32_t *)_ ## x ;					\
-//   }									\
-//   static void x (uint32_t value) {					\
-//     *(uint32_t *)_ ## x = value;					\
-//   }
+  // Accessor function template for timer registers
+  typedef enum { CR1 = 0, CR2, SMCR, DIER, SR, EGR, CCMR1, CCMR2, CCER, CNT, PSC, ARR, RCR, CCR1, CCR2, CCR3, CCR4, BDTR, DCR, DMAR, OR } TIMER_REG;
+template <const uint8_t TIMER_NUMBER, TIMER_REG reg> static volatile uint32_t * timer_reg(void) {
+    // use of volatile as we may also access registers via bit-banding
+    return (volatile uint32_t *)timer_configs[TIMER_NUMBER].base + (reg << 2); 
+  }
 
 
 template <const uint8_t TIMER_NUMBER, const uint8_t CHANNEL_NUMBER>
@@ -96,14 +90,10 @@ template <const uint8_t TIMER_NUMBER>
 struct TIMER_T {
   static_assert(TIMER_NUMBER > 0 && TIMER_NUMBER < 18, "Timers must be in range 1->17");
   static_assert(timer_configs[TIMER_NUMBER].base != 0xdeadbeef, "Timer not defined for this platform");
-
-  // Accessor function template for timer registers
-  typedef enum { CR1 = 0, CR2, SMCR, DIER, SR, EGR, CCMR1, CCMR2, CCER, CNT, PSC, ARR, RCR, CCR1, CCR2, CCR3, CCR4, BDTR, DCR, DMAR, OR } TIMER_REG;
-  template <TIMER_REG reg> static volatile uint32_t * timer_reg(void) {
-    // use of volatile as we may also access registers via bit-banding
-    return (volatile uint32_t *)timer_configs[TIMER_NUMBER].base + (reg << 2); 
-  }
   
+  static void init() {
+  }
+
   // Overall timer enabling in RCC
   static constexpr uintptr_t rcc_enable_bit = RCC_BB_BASE + timer_configs[TIMER_NUMBER].rcc_enable_offset;
   static void enable() {
@@ -120,12 +110,12 @@ struct TIMER_T {
   }
 
   // Time base setup
-  typedef enum { NO_DIVISION = 0, DIVIDE_2 = 1, DIVIDE_4 = 2 } CLOCK_DIVIDER;
+  typedef enum { DIVIDE_1 = 0, DIVIDE_2 = 1, DIVIDE_4 = 2 } CLOCK_DIVIDER;
   static void set_divider(const CLOCK_DIVIDER division) {
-    uint32_t val = *timer_reg<CR1>();
+    uint32_t val = *timer_reg<TIMER_NUMBER, CR1>();
     val &= ~TIM_CR1_CKD_Msk;
     val |= division << TIM_CR1_CKD_Pos;
-    *timer_reg<CR1>() = val;
+    *timer_reg<TIMER_NUMBER, CR1>() = val;
   }
 
   typedef enum { UP_COUNTER = 0, DOWN_COUNTER = 1 } DIRECTION;
@@ -136,11 +126,37 @@ struct TIMER_T {
 
   typedef enum { EDGE_ALIGNED = 0, CENTRE_ALIGNED_1 = 1, CENTRE_ALIGNED_2 = 2, CENTRE_ALIGNED_3 = 3 } ALIGNMENT_MODE;
   static void set_alignment_mode(const ALIGNMENT_MODE alignent_mode) {
-    uint32_t val = *timer_reg<CR1>();
+    uint32_t val = *timer_reg<TIMER_NUMBER, CR1>();
     val &=  ~TIM_CR1_CMS_Msk;
     val |= alignent_mode << TIM_CR1_CMS_Pos;
-    *timer_reg<CR1>() = val;
+    *timer_reg<TIMER_NUMBER, CR1>() = val;
   }
+
+  static void set_counter(uint16_t counter) {
+    *timer_reg<TIMER_NUMBER, CNT>() = counter;
+  }
+
+  static uint16_t counter() {
+    return *timer_reg<TIMER_NUMBER, CNT>();
+  }
+
+  static void set_prescaler(uint16_t prescaler) {
+    *timer_reg<TIMER_NUMBER, PSC>() = prescaler;
+  }
+
+  static void set_reload(uint16_t reload) {
+    *timer_reg<TIMER_NUMBER, ARR>() = reload;
+  }
+
+  // One pulse mode
+  static constexpr uintptr_t opm_bit = timer_configs[TIMER_NUMBER].bb_base + BB_OFFSETOF(TIM_TypeDef, CR1) + BB_BIT(TIM_CR1_OPM_Pos);
+  static void one_pulse_mode_enable() {
+    *(uint32_t*)opm_bit = 1;
+  }
+  static void one_pulse_mode_disable() {
+    *(uint32_t*)opm_bit = 0;
+  }
+    
   
   
 };
@@ -154,6 +170,10 @@ struct GP_TIMER_T  : public TIMER_T<TIMER_NUMBER>
   typedef TIMER_CHANNEL_T<TIMER_NUMBER, 2> CH2;
   typedef TIMER_CHANNEL_T<TIMER_NUMBER, 3> CH3;
   typedef TIMER_CHANNEL_T<TIMER_NUMBER, 4> CH4;
+
+  static void init() {
+    TIMER_T<TIMER_NUMBER>::init();
+  };
 
 
   
@@ -242,3 +262,16 @@ struct GP_TIMER_T  : public TIMER_T<TIMER_NUMBER>
   
 };
 
+template<const uint8_t TIMER_NUMBER>
+struct ADV_TIMER_T : public TIMER_T<TIMER_NUMBER>
+{
+  static_assert(TIMER_NUMBER == 1 || TIMER_NUMBER == 8, "Only TIM1 and TIM8 are advanced timers");
+
+  static void init() {
+    TIMER_T<TIMER_NUMBER>::init();
+  }
+
+  static void set_repetition_counter(const uint16_t value) {
+    *timer_reg<TIMER_NUMBER, RCR>() = value;
+  }
+};
